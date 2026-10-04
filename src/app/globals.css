@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/* Single source of truth for the accent. Change these two values and every
+   button, toggle, focus ring and link follows. */
+@theme {
+  /* presetfun violet. Not green: green is kept for "done" states, so the
+     interactive colour has to be something else or the two meanings blur. */
+  --color-accent: #6d4aff;
+  --color-accent-hover: #8466ff;
+  --color-accent-ink: #ffffff; /* white clears AA on this violet */
+
+  /* Page ground, tuned very slightly blue so the accent sits in the same family. */
+  --color-ground: #090b0f;
+  --color-panel: #0d1017;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+/* Match the wallet-adapter button to the accent instead of its default purple. */
+.wallet-adapter-button-trigger {
+  background: var(--color-accent) !important;
+  color: var(--color-accent-ink) !important;
+  border-radius: 0.625rem !important;
+  font-family: inherit !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  height: 2.5rem !important;
+  padding: 0 1rem !important;
+}
+
+.wallet-adapter-button-trigger:not([disabled]):hover {
+  background: var(--color-accent-hover) !important;
+}
+
+/* Give the connect button a 44px tap target on touch screens. */
+@media (max-width: 639px) {
+  .wallet-adapter-button-trigger {
+    height: 2.75rem !important;
+    padding: 0 0.875rem !important;
+  }
+}
+
+/* The adapter renders the wallet icon inside the button; keep it legible on amber. */
+.wallet-adapter-button-trigger .wallet-adapter-button-start-icon,
+.wallet-adapter-button-trigger .wallet-adapter-button-end-icon {
+  filter: brightness(0.15);
+}
+
+.wallet-adapter-modal-wrapper {
+  background: #12121a !important;
+}
+
+.wallet-adapter-modal-button-close {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Addresses, signatures and RPC errors are long unbroken strings; let them
+   wrap instead of pushing the page sideways on a phone. */
+body {
+  overflow-wrap: break-word;
+}
