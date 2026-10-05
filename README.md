@@ -63,8 +63,19 @@ The browser never sees the RPC key: it talks to `/api/rpc`, a method-allowlisted
 pnpm install
 cp .env.example .env.local   # fill in RPC, Pinata, Upstash
 pnpm dev
-pnpm test                    # curve builder + sampling tests
+pnpm test                    # curve builder, sampling and simulator tests
 ```
+
+### Seed the marketplace
+
+Publishes the five starter presets through the site's own publish → confirm flow, signed by a local keypair (which becomes their fee claimer). Each costs the config account's rent plus network fees.
+
+```bash
+pnpm seed --url https://your-site.vercel.app --keypair ~/.config/solana/id.json --dry-run   # simulate only
+pnpm seed --url https://your-site.vercel.app --keypair ~/.config/solana/id.json             # publish
+```
+
+`--only rwa-steady,meme-anti-snipe` limits it to some presets; `--rpc` sends through a keyed RPC. Re-running skips presets the wallet has already listed.
 
 ## License
 
