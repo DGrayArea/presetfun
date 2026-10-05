@@ -488,3 +488,109 @@ export const STARTER_PRESETS: {
     },
   },
 ];
+
+/**
+ * Buy simulator.
+ *
+ * Plays a list of buys against a curve, in order, and reports what each buyer
+ * walked away with. It answers the question the shapes exist for: "if a bot
+ * puts 20 SOL in at the open and a crowd follows, who ends up holding what?"
+ *
+ * Fees are applied the way the program applies them to a SOL-in buy: taken
+ * from the input before it reaches the curve. The anti-sniper fee is read
+ * from the exponential schedule at each buy's time. The program's dynamic
+ * (volatility) fee is not modelled, so real fees on a busy curve run slightly
+ * higher; the comparison between shapes is what this is for, not a quote.
+ */
+
+export type SimBuy = { sol: number; atSeconds: number };
+
+export type SimFill = {
+  sol: number;
+  atSeconds: number;
+  feePct: number;
+  feeSol: number;
+  /** Share of total supply this buyer received. */
+  supplyPct: number;
+  /** Market cap the buyer effectively paid, averaged over their fill. */
+  avgMarketCapSol: number;
+  /** False once the curve has graduated and the buy could not fill. */
+  filled: boolean;
+};
+
+/** Base fee in percent at `t` seconds after the open, per the spec's schedule. */
+export function feePctAt(spec: CurveSpec, t: number): number {
+  const end = spec.feeBps / 100;
+  const launch = spec.antiSniper;
+  if (!launch) return end;
+  const periods = launch.minutes * 6;
+  const periodSeconds = (launch.minutes * 60) / periods;
+  const period = Math.min(Math.floor(Math.max(t, 0) / periodSeconds), periods);
+  const start = launch.startFeeBps / 100;
+  // Exponential decay from start to end across the periods.
+  return start * Math.pow(end / start, period / periods);
+}
+
+export function simulateBuys(spec: CurveSpec, buys: SimBuy[], points?: CurvePoint[]): SimFill[] {
+  const curve = points ?? sampleCurve(buildConfig(spec));
+  const raise = curve[curve.length - 1].raisedSol;
+  let raised = 0;
+
+  return buys.map(({ sol, atSeconds }) => {
+    const feePct = feePctAt(spec, atSeconds);
+    const toCurve = Math.min(sol * (1 - feePct / 100), raise - raised);
+    if (toCurve <= 0) {
+      return { sol, atSeconds, feePct, feeSol: 0, supplyPct: 0, avgMarketCapSol: 0, filled: false };
+    }
+    const before = supplyForSol(curve, raised);
+    raised += toCurve;
+    const supplyPct = supplyForSol(curve, raised) - before;
+    // Paid toCurve SOL for supplyPct% of the supply → implied market cap.
+    const avgMarketCapSol = supplyPct > 0 ? toCurve / (supplyPct / 100) : 0;
+    return {
+      sol,
+      atSeconds,
+      feePct,
+      feeSol: sol * (feePct / 100),
+      supplyPct,
+      avgMarketCapSol,
+      filled: true,
+    };
+  });
+}
+
+export type Scenario = {
+  id: string;
+  label: string;
+  blurb: string;
+  buys: SimBuy[];
+};
+
+/** A first buyer at the open, then a crowd arriving after a delay. */
+export function sniperScenario(sniperSol: number, crowd: number, eachSol: number, crowdAfterSeconds: number): SimBuy[] {
+  return [
+    { sol: sniperSol, atSeconds: 0 },
+    ...Array.from({ length: crowd }, (_, i) => ({ sol: eachSol, atSeconds: crowdAfterSeconds + i * 5 })),
+  ];
+}
+
+export const SCENARIOS: Scenario[] = [
+  {
+    id: "sniper",
+    label: "Sniper vs crowd",
+    blurb: "A bot puts 20 SOL in at the open; 25 people buy 1 SOL each over the next few minutes.",
+    buys: sniperScenario(20, 25, 1, 60),
+  },
+  {
+    id: "whale",
+    label: "Whale at the open",
+    blurb: "One wallet buys 50 SOL in the first second, then 10 people buy 2 SOL each.",
+    buys: sniperScenario(50, 10, 2, 30),
+  },
+  {
+    id: "crowd",
+    label: "Fair crowd",
+    blurb: "40 people buy 1 SOL each, one every ten seconds. No one gets there first.",
+    buys: Array.from({ length: 40 }, (_, i) => ({ sol: 1, atSeconds: i * 10 })),
+  },
+];

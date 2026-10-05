@@ -8,13 +8,11 @@ import BN from "bn.js";
 
 import { getAppConfig } from "@/lib/config.server";
 import { buildConfig, parseSpec } from "@/lib/curveStudio";
+import { presetStats } from "@/lib/presetStats";
 import {
-  cacheStats,
-  getCachedStats,
   getPreset,
   listPresets,
   savePreset,
-  type PresetStats,
   type StoredPreset,
 } from "@/lib/presetStore";
 import { redisConfigured, redisExec } from "@/lib/redis";
@@ -91,26 +89,6 @@ function key(value: string, label: string): PublicKey {
 
 function clean(text: unknown, max: number): string {
   return typeof text === "string" ? text.replace(/\s+/g, " ").trim().slice(0, max) : "";
-}
-
-async function presetStats(
-  client: DynamicBondingCurveClient,
-  config: string,
-): Promise<PresetStats> {
-  const cached = await getCachedStats(config).catch(() => null);
-  if (cached) return cached;
-  const pools = await withRetry(() => client.state.getPoolsByConfig(config));
-  const stats: PresetStats = {
-    launches: pools.length,
-    graduated: pools.filter((p) => p.account.poolState.isMigrated !== 0).length,
-    // SOL currently sitting in the curves, plus what graduated ones raised.
-    volumeSol: pools.reduce(
-      (sum, p) => sum + Number(fromBase(p.account.poolState.quoteReserve, QUOTE_DECIMALS)),
-      0,
-    ),
-  };
-  await cacheStats(config, stats).catch(() => {});
-  return stats;
 }
 
 export async function POST(req: Request) {

@@ -25,6 +25,7 @@ Plus:
 - **Graduation** — migrates to **DAMM v2** with the fee tier you pick (0.25–4%), liquidity permanently locked.
 - **Live preview** — market cap vs supply sold, SOL raised by graduation, and what the first 1 / 5 / 10 SOL of buying gets. The preview runs the same `buildConfig` the server uses to build the transaction, so the chart *is* the shipped curve (tested in `test/curveStudio.test.ts`).
 - **Starter presets** for memes, community fair launches, real-world assets and stock-paired launches.
+- **Buy simulator** — play a scenario (sniper vs crowd, whale at the open, fair crowd) against every shape at once with your caps and fees. It reports two things on purpose: how much of the *supply* the first buyer ends up holding (a steeper curve shrinks this) and their share of *everything bought* (the curve shape barely moves this; the anti-sniper fee does).
 
 ## Preset marketplace
 
@@ -35,6 +36,8 @@ A DBC config is an on-chain account that any number of pools can be opened again
 - **Earnings** = every config you're fee claimer on (presets *and* your own studio launches), read from chain, claimable in one batch.
 
 No new program: the marketplace is a listing, and the economics are Meteora's own partner fee. Listings can't be spoofed — a preset is only listed after its config lands on-chain, is checked against the published spec, and the publish request is keyed to a config address the server generated for that wallet.
+
+Every preset has its own page at `/p/<config>` with the curve, its launch and graduation counts, the simulator, a one-click launch form and share buttons. Its social card draws the curve itself, so a preset link posted on X or Telegram shows what it does.
 
 When you launch on **your own** curve from the studio, the config's fee claimer is you, so you keep both the creator and the partner share.
 
@@ -48,6 +51,8 @@ src/app/api/dbc/route.ts      launch on your own curve, trade, claim creator fee
 src/app/api/dbc/presets/      publish / confirm / list / launch / earnings / claim
 src/components/CurveStudio    the designer + live chart
 src/components/PresetMarket   marketplace, launch-from-preset, author earnings
+src/components/BuySimulator   scenario simulator across all shapes
+src/app/p/[config]/           shareable preset page + generated social card
 ```
 
 The browser never sees the RPC key: it talks to `/api/rpc`, a method-allowlisted, rate-limited proxy.

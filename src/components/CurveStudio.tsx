@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { Card, Choice, Field } from "@/components/ui";
+import { BuySimulator } from "@/components/BuySimulator";
 import { CurveChart } from "@/components/CurveChart";
 import {
   DEFAULT_SPEC,
@@ -270,6 +271,8 @@ export function CurveStudio({
           onChange={(migratedFeeBps) => set({ migratedFeeBps })}
         />
       </Card>
+
+      <BuySimulator spec={spec} />
     </div>
   );
 }

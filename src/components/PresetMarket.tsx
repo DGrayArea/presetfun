@@ -17,7 +17,7 @@ import type { CurveSpec } from "@/lib/curveStudio";
  * authors — collect what their presets have earned.
  */
 
-type Preset = {
+export type Preset = {
   config: string;
   author: string;
   name: string;
@@ -121,8 +121,10 @@ function PresetCard({ preset, onLaunch }: { preset: Preset; onLaunch: () => void
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-100">{preset.name}</h3>
+        <div className="flex flex-col">
+          <a href={`/p/${preset.config}`} className="text-sm font-semibold text-slate-100 hover:underline">
+            {preset.name}
+          </a>
           <a
             href={explorerUrl(cluster, "account", preset.author)}
             target="_blank"
@@ -162,7 +164,7 @@ function Mini({ label, value }: { label: string; value: string }) {
   );
 }
 
-function LaunchFromPreset({ preset, onBack }: { preset: Preset; onBack: () => void }) {
+export function LaunchFromPreset({ preset, onBack }: { preset: Preset; onBack?: () => void }) {
   const { cluster, fees } = useAppConfig();
   const { run, busy, error, setError, signatures } = useVenueAction();
   const preview = useCurvePreview(preset.spec);
@@ -214,9 +216,11 @@ function LaunchFromPreset({ preset, onBack }: { preset: Preset; onBack: () => vo
   return (
     <ConnectGate prompt="Connect a wallet to launch from this preset.">
       <div className="space-y-4">
-        <button onClick={onBack} className="text-sm text-slate-400 hover:text-slate-200">
-          ← All presets
-        </button>
+        {onBack && (
+          <button onClick={onBack} className="text-sm text-slate-400 hover:text-slate-200">
+            ← All presets
+          </button>
+        )}
         <Card className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-slate-100">{preset.name}</h3>

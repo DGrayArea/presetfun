@@ -11,6 +11,9 @@ import {
   shapeWeights,
   summarize,
   validateSpec,
+  feePctAt,
+  simulateBuys,
+  sniperScenario,
   type CurveSpec,
 } from "@/lib/curveStudio";
 
@@ -139,5 +142,35 @@ describe("curve studio: specs", () => {
     expect(spec.antiSniper).toEqual({ startFeeBps: 3000, minutes: 3 });
     expect(() => parseSpec({ ...spec, shape: "cubic" })).toThrow(/shape/);
     expect(() => parseSpec({ ...spec, initialMarketCap: "lots" })).toThrow(/number/);
+  });
+});
+
+describe("curve studio: buy simulator", () => {
+  it("gives a sniper less of a steep curve than of a wide one", () => {
+    const buys = sniperScenario(20, 25, 1, 60);
+    const steep = simulateBuys({ ...DEFAULT_SPEC, shape: "steepStart", intensity: 70 }, buys);
+    const wide = simulateBuys({ ...DEFAULT_SPEC, shape: "wideBase", intensity: 70 }, buys);
+    expect(steep[0].supplyPct).toBeLessThan(wide[0].supplyPct * 0.75);
+  });
+
+  it("charges the launch fee at the open and the normal fee after it decays", () => {
+    const spec = { ...DEFAULT_SPEC, antiSniper: { startFeeBps: 5_000, minutes: 5 } };
+    expect(feePctAt(spec, 0)).toBeCloseTo(50, 6);
+    expect(feePctAt(spec, 5 * 60)).toBeCloseTo(1, 6);
+    expect(feePctAt(spec, 60)).toBeLessThan(50);
+    expect(feePctAt(spec, 60)).toBeGreaterThan(1);
+    const [sniper] = simulateBuys(spec, [{ sol: 20, atSeconds: 0 }]);
+    expect(sniper.feeSol).toBeCloseTo(10, 6);
+  });
+
+  it("stops filling once the curve graduates", () => {
+    const fills = simulateBuys(DEFAULT_SPEC, [
+      { sol: 500, atSeconds: 0 },
+      { sol: 1, atSeconds: 10 },
+    ]);
+    expect(fills[0].filled).toBe(true);
+    expect(fills[1].filled).toBe(false);
+    const total = fills.reduce((s, f) => s + f.supplyPct, 0);
+    expect(total).toBeCloseTo(summarize(buildConfig(DEFAULT_SPEC)).soldAtGraduationPct, 1);
   });
 });
